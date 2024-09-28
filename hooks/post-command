@@ -25,7 +25,7 @@ function plugin_read_list_into_result() {
   [[ ${#result[@]} -gt 0 ]] || return 1
 }
 
-MODULE_DIR="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}"
+MODULE_DIR="$(echo ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} | sed 's/\/$//')"
 DEBUG_PIPELINE_OUTPUT="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT-""}"
 
 # Terragrunt extra args
@@ -56,7 +56,7 @@ if [[ -z "${discovered_modules_list}" ]]; then
 fi
 
 for module in ${discovered_modules_list}; do 
-  discovered_modules+=("${module#*${MODULE_DIR}}")
+  discovered_modules+=("${module#*${MODULE_DIR}/}")
 done
 
 echo ":building_construction: Discovered modules - $(printf '%s ' "${discovered_modules[@]}")"
@@ -119,9 +119,16 @@ fi
 BASE_PIPELINE="steps:"
 PIPELINE="${BASE_PIPELINE}"
 
+prompt=()
+prompt+=("Select the modules to deploy")
+if [[ -n "${data_modules[@]}" ]]; then
+  prompt+=(":chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")")
+fi
+
 PIPELINE+="
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Select Modules\"
-  prompt: Select the modules to deploy
+  prompt: |- 
+    $(printf '%s/n' ${prompt})
   fields: 
     - select: \"Modules\"
       key: \"modules\"
