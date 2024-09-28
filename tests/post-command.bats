@@ -6,9 +6,9 @@ load "$BATS_PLUGIN_PATH/load.bash"
 #export BUILDKITE_AGENT_STUB_DEBUG=/dev/tty
 
 setup() {
-  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME="testing"
+  export BUILDKITE_LABEL="testing"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR="test/test"
-  export BUILDKITE_PLUGINS="[{\"github.com/roleyfoley/terragrunt-workspace#v1.0.0\":{\"name\":\"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}\",\"module_dir\":\"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}\"}},{\"github.com/buildkite-plugins/docker-buildkite-plugin#v3.7.0\":{}}]"
+  export BUILDKITE_PLUGINS="[{\"github.com/roleyfoley/terragrunt-workspace#v1.0.0\":{\"module_dir\":\"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}\"}},{\"github.com/buildkite-plugins/docker-buildkite-plugin#v3.7.0\":{}}]"
 
   export OUTPUT_PATH="$PWD/tests/.outputs/"
   mkdir -p "${OUTPUT_PATH}"
@@ -21,6 +21,7 @@ setup() {
   MODULE="app"
 
   stub buildkite-agent \
+    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     'pipeline upload : echo Uploading pipeline'
 
   stub terragrunt \
@@ -43,16 +44,16 @@ setup() {
   assert_output $MODULE
 
   run yq '.steps[0].block' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
-  assert_output ":terragrunt: [${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}] Select Modules"
+  assert_output ":terragrunt: [${BUILDKITE_LABEL}] Select Modules"
 
   run yq '.steps[1].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
-  assert_output ":terragrunt: [${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}] Plan Modules"
+  assert_output ":terragrunt: [${BUILDKITE_LABEL}] Plan Modules"
 
   run yq '.steps[2].block' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
-  assert_output ":terragrunt: [${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}] Apply Changes?"
+  assert_output ":terragrunt: [${BUILDKITE_LABEL}] Apply Changes?"
 
   run yq '.steps[3].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
-  assert_output ":terragrunt: [${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}] Apply Modules"
+  assert_output ":terragrunt: [${BUILDKITE_LABEL}] Apply Modules"
 }
 
 @test "Generates a pipeline with a deploy module and refresh" { 
@@ -64,6 +65,7 @@ setup() {
     "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\"]}'"
 
   stub buildkite-agent \
+    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     'pipeline upload : echo Uploading pipeline'
 
   run "$PWD/hooks/post-command"
@@ -95,6 +97,7 @@ setup() {
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="${MODULE}"
 
   stub buildkite-agent \
+    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     'pipeline upload : echo Uploading pipeline'
 
   stub terragrunt \

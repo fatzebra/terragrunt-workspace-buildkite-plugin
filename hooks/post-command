@@ -25,7 +25,6 @@ function plugin_read_list_into_result() {
   [[ ${#result[@]} -gt 0 ]] || return 1
 }
 
-NAME="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}"
 MODULE_DIR="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}"
 DEBUG_PIPELINE_OUTPUT="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT-""}"
 
@@ -42,8 +41,14 @@ else
 fi
 
 # look for the available terragrunt modules
+if buildkite-agent meta-data exists "terragrunt-workspace-module-groups" ; then 
+  module_groups="$(buildkite-agent meta-data get "terragrunt-workspace-module-groups")"
+else
+  module_groups="$(terragrunt output-module-groups --terragrunt-working-dir ${MODULE_DIR} ${terragrunt_args})"
+fi
+discovered_modules_list="$(echo "${module_groups}" | jq -r '[keys[] as $k | .[$k] ]| flatten | .[]')"
+
 discovered_modules=()
-discovered_modules_list="$(terragrunt output-module-groups --terragrunt-working-dir ${MODULE_DIR} ${terragrunt_args} | jq -r '[keys[] as $k | .[$k] ]| flatten | .[]')"
 
 if [[ -z "${discovered_modules_list}" ]]; then
   echo "No Modules found"
@@ -115,7 +120,7 @@ BASE_PIPELINE="steps:"
 PIPELINE="${BASE_PIPELINE}"
 
 PIPELINE+="
-- block: \":terragrunt: [${NAME}] Select Modules\"
+- block: \":terragrunt: [${BUILDKITE_LABEL}] Select Modules\"
   prompt: Select the modules to deploy
   fields: 
     - select: \"Modules\"
@@ -131,7 +136,7 @@ for module in "${deploy_modules[@]}" ; do
 done
 
 PIPELINE+="
-- label: \":terragrunt: [${NAME}] Plan Modules\"
+- label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   commands:
     ${refresh_commands}
     - mkdir -p \"/tmp/\$\${BUILDKITE_JOB_ID}/\"
@@ -142,10 +147,10 @@ PIPELINE+="
       done
   plugins: ${step_plugins}
 
-- block: \":terragrunt: [${NAME}] Apply Changes?\"
+- block: \":terragrunt: [${BUILDKITE_LABEL}] Apply Changes?\"
   prompt: Apply changes?
 
-- label: \":terragrunt: [${NAME}] Apply Modules\"
+- label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
   commands:
     ${refresh_commands}
     - |-

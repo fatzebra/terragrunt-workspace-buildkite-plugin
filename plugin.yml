@@ -7,10 +7,6 @@ requirements:
   - jq
 configuration:
   properties:
-    name: 
-      description: The name of the module group you are running (test, prod etc.)
-      type: string
-
     module_dir:
       description: The path to the modules that you want to apply
       type: string

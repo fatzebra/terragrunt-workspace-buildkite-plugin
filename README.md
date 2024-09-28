@@ -45,10 +45,6 @@ Then the block will ask you to deploy the db and web modules
 
 ## Configuration
 
-### `name` (Required, string)
-
-A name for the set of modules you want to deploy generally this an environment like test, staging, production. Only used for display purposes here
-
 ### `module_dir` (Required, string)
 
 The relative path to the directory where the terragrunt modules you want to run are in.
@@ -64,6 +60,16 @@ The directory names of the modules you want to run `terragrunt refresh` each tim
 ### `debug_pipeline_output` (Optional, string)
 
 Writes the pipeline to the nominated output path
+
+## Module Discovery 
+
+Modules are discovered using the terragrunt command `terragrunt output-module-groups` during a post-command hook, so if you don't have terragrunt installed on your agent and instead use the docker or docker-compose plugins this will fail to run. 
+
+To get around this we can also read the module groups output from a meta-data key. To do this in the command that the plugin belongs to add this command to set the meta-data key. 
+
+```
+buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir <the configured module_dir for the plugin>)
+```
 
 ## Developing
 
