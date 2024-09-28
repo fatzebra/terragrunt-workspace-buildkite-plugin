@@ -1,0 +1,164 @@
+#!/bin/bash
+set -euo pipefail
+
+# Reads a list from plugin config into a global result array
+# Returns success if values were read
+function plugin_read_list_into_result() {
+  result=()
+
+  for prefix in "$@" ; do
+    local i=0
+    local parameter="${prefix}_${i}"
+
+    if [[ -n "${!prefix:-}" ]] ; then
+      echo "🚨 Plugin received a string for $prefix, expected an array" >&2
+      exit 1
+    fi
+
+    while [[ -n "${!parameter:-}" ]]; do
+      result+=("${!parameter}")
+      i=$((i+1))
+      parameter="${prefix}_${i}"
+    done
+  done
+
+  [[ ${#result[@]} -gt 0 ]] || return 1
+}
+
+NAME="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_NAME}"
+MODULE_DIR="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}"
+DEBUG_PIPELINE_OUTPUT="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT-""}"
+
+# Terragrunt extra args
+if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_TERRAGRUNT_ARGS ; then
+  terragrunt_args=()
+  for arg in "${result[@]}" ; do
+    args+=( "${arg}" )
+  done
+  terragrunt_args="$(printf "%q " "${args[@]}")"
+
+else 
+  terragrunt_args=""
+fi
+
+# look for the available terragrunt modules
+discovered_modules=()
+discovered_modules_list="$(terragrunt output-module-groups --terragrunt-working-dir ${MODULE_DIR} ${terragrunt_args} | jq -r '[keys[] as $k | .[$k] ]| flatten | .[]')"
+
+if [[ -z "${discovered_modules_list}" ]]; then
+  echo "No Modules found"
+  exit 1
+fi
+
+for module in ${discovered_modules_list}; do 
+  discovered_modules+=("${module/"${PWD}/${MODULE_DIR}/"/""}")
+done
+
+echo ":building_construction: Discovered modules - $(printf '%s ' "${discovered_modules[@]}")"
+
+# Filter based on the allowed modules
+if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES ; then
+  available_modules=()
+  for discovered_module in "${discovered_modules[@]}"; do
+    for allowed_module in "${result[@]}" ; do 
+      if [[ "${discovered_module}" == "${allowed_module}" ]]; then 
+        available_modules+=("${discovered_module}")
+      fi
+    done
+  done
+
+  echo ":policeman: Modules after filtering - $(printf '%s ' "${available_modules[@]}")"
+else 
+  available_modules=("${discovered_modules[@]}")
+fi
+
+
+# Split the data modules from the deploy modules
+if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES ; then
+  data_modules=()
+  deploy_modules=()
+
+  for available_module in "${available_modules[@]}"; do 
+    for data_module in "${result[@]}" ; do 
+      if [[ "${data_module}" == "${available_module}" ]]; then 
+        data_modules+=("${available_module}")
+      else
+        deploy_modules+=("${available_module}")
+      fi
+    done 
+  done
+
+  echo ":chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")"
+else
+  deploy_modules=("${available_modules[@]}")
+fi
+
+echo ":rocket: Modules for deployment - $(printf '%s ' "${deploy_modules[@]}")"
+
+# Get the plugin settings for the source job so we can apply them - minus this one to the generated steps
+step_plugins="$(echo ${BUILDKITE_PLUGINS} | jq -c '[.[] | select(keys[] | contains("terragrunt-workspace") != true )]')"
+
+# Data Module Commands
+if [[ -n "${data_modules[@]}" ]] ; then
+
+  refresh_commands=()
+  for module in "${data_modules[@]}" ; do
+    refresh_commands+=( "- terragrunt refresh --terragrunt-working-dir ${MODULE_DIR}/${module} ${terragrunt_args}")
+  done
+
+  refresh_commands="$(printf '%s\n' "${refresh_commands[@]}")"
+else
+  refresh_commands=""
+fi
+
+BASE_PIPELINE="steps:"
+PIPELINE="${BASE_PIPELINE}"
+
+PIPELINE+="
+- block: \":terragrunt: [${NAME}] Select Modules\"
+  prompt: Select the modules to deploy
+  fields: 
+    - select: \"Modules\"
+      key: \"modules\"
+      multiple: true
+      options: 
+"
+
+for module in "${deploy_modules[@]}" ; do
+  PIPELINE+="
+        - value: \"${module}\"
+  "
+done
+
+PIPELINE+="
+- label: \":terragrunt: [${NAME}] Plan Modules\"
+  commands:
+    ${refresh_commands}
+    - mkdir -p \"/tmp/\$\${BUILDKITE_JOB_ID}/\"
+    - |-
+      for module in \$\$(buildkite-agent meta-data get modules); do
+        terragrunt plan -out \"/tmp/\$\${BUILDKITE_JOB_ID}/\$\${module}\" --terragrunt-working-dir ${MODULE_DIR}/\$\${module} ${terragrunt_args}
+        buildkite-agent annotate \"**\$\${module}**\n\`\`\`\$\$(terragrunt show -no-color \"/tmp/\$\${BUILDKITE_JOB_ID}/\$\${module}\")\`\`\`\n\" --context \"\$\${module}\"
+      done
+  plugins: ${step_plugins}
+
+- block: \":terragrunt: [${NAME}] Apply Changes?\"
+  prompt: Apply changes?
+
+- label: \":terragrunt: [${NAME}] Apply Modules\"
+  commands:
+    ${refresh_commands}
+    - |-
+      for workspace in \$\$(buildkite-agent meta-data get modules); do
+        terragrunt apply --terragrunt-working-dir ${MODULE_DIR}/\$\${workspace}
+      done
+  plugins: ${step_plugins}
+"
+
+if [[ -n "${DEBUG_PIPELINE_OUTPUT}" ]]; then 
+  echo ":bug: writing pipeline output"
+  echo "${PIPELINE}" > ${DEBUG_PIPELINE_OUTPUT}
+fi 
+
+echo "${PIPELINE}" | buildkite-agent pipeline upload
+

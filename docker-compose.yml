@@ -1,0 +1,14 @@
+services:
+  lint:
+    image: buildkite/plugin-linter
+    command: ['--id', 'roleyfoley/terragrunt-workspace']
+    volumes:
+      - ".:/plugin:ro"
+
+  test:
+    build:
+      dockerfile: tests/Dockerfile
+      context: .
+    volumes:
+      - "./:/plugin"
+

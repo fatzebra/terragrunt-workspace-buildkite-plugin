@@ -1,0 +1,21 @@
+name: testing
+on: 
+  - push
+  - pull_request
+
+jobs:
+  lint: 
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - run: docker compose run --rm lint
+
+  test: 
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - run: docker compose run --rm test

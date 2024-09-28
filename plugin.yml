@@ -1,0 +1,37 @@
+name: Terragrunt Workspace Deploy
+description: Helps with terragrunt workspace deployments
+author: https://github.com/roleyfoley
+requirements: 
+  - terragrunt
+  - terraform
+  - jq
+configuration:
+  properties:
+    name: 
+      description: The name of the module group you are running (test, prod etc.)
+      type: string
+
+    module_dir:
+      description: The path to the modules that you want to apply
+      type: string
+
+    allowed_modules:
+      description: A list of modules that can be used by this plugin
+      type: array
+
+    data_modules:
+      description: Modules that are run with refresh at the start of each command. Used to get the state from modules with only data components
+      type: array
+
+    terragrunt_args:
+      description: Extra arguments to add to terragrunt commands
+      type: array
+
+    debug_pipeline_output:
+      description: A file path to output the pipeline to for testing
+      type: string
+
+  required: 
+    - name
+    - module_dir
+  additionalProperties: false
