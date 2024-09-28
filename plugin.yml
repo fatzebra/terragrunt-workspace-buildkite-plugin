@@ -28,6 +28,5 @@ configuration:
       type: string
 
   required: 
-    - name
     - module_dir
   additionalProperties: false

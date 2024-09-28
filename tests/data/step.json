@@ -1,0 +1,27 @@
+{
+  "label": "deploy test",
+  "type": "command",
+  "if": null,
+  "state": "running",
+  "key": null,
+  "outcome": null,
+  "notify": [
+  ],
+  "command": "buildkite-agent meta-data set terragrunt-workspace-module-groups \"$(terragrunt output-module-groups --terragrunt-working-dir test/test/ )\"",
+  "parallelism": null,
+  "env": {
+    "BUILDKITE_PLUGINS_ALWAYS_CLONE_FRESH": "true"
+  },
+  "timeout": null,
+  "concurrency_limit": null,
+  "concurrency_key": null,
+  "agents": [
+    "queue=terraform",
+    "Environment=test"
+  ],
+  "depends_on": [
+    {
+      "step": null
+    }
+  ]
+}

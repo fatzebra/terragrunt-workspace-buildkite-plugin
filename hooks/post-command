@@ -101,14 +101,28 @@ fi
 echo ":rocket: Modules for deployment - $(printf '%s ' "${deploy_modules[@]}")"
 
 # Get the plugin settings for the source job so we can apply them - minus this one to the generated steps
-step_plugins="$(echo ${BUILDKITE_PLUGINS} | jq -c '[.[] | select(keys[] | contains("terragrunt-workspace") != true )]')"
+step="$(buildkite-agent step get --format json)"
+
+step_args=()
+step_args+=("plugins: $(echo ${BUILDKITE_PLUGINS} | jq -c '[.[] | select(keys[] | contains("terragrunt-workspace") != true )]')")
+copy_params=("agents" "env" "notify")
+for copy_param in "${copy_params[@]}"; do 
+  if [[ -n "$( echo "${step}" | jq -r --arg copy_param "${copy_param}" 'if (.[$copy_param]) then .[$copy_param] else null end | select(.!=null)' )" ]]; then
+    if [[ "${copy_param}" == "agents" ]]; then
+      step_args+=("${copy_param}: $(echo ${step} | jq -c '.agents | map({(. | split("=") | .[0]): (. | split("=") | .[1]) }) | add' )" )
+    else
+      step_args+=("${copy_param}: $(echo ${step} | jq -c --arg copy_param "${copy_param}" '.[$copy_param]' )")
+    fi
+  fi
+done
+step_args="$(printf '  %s\n' "${step_args[@]}")"
 
 # Data Module Commands
 if [[ -n "${data_modules[@]}" ]] ; then
 
   refresh_commands=()
   for module in "${data_modules[@]}" ; do
-    refresh_commands+=( "- terragrunt refresh --terragrunt-working-dir ${MODULE_DIR}/${module} ${terragrunt_args}")
+    refresh_commands+=( "- terragrunt refresh --terragrunt-working-dir \"${MODULE_DIR}/${module}\" ${terragrunt_args}")
   done
 
   refresh_commands="$(printf '%s\n' "${refresh_commands[@]}")"
@@ -119,16 +133,14 @@ fi
 BASE_PIPELINE="steps:"
 PIPELINE="${BASE_PIPELINE}"
 
-prompt=()
-prompt+=("Select the modules to deploy")
+prompt="Select the modules to deploy"
 if [[ -n "${data_modules[@]}" ]]; then
-  prompt+=(":chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")")
+  prompt+="\n:chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")"
 fi
 
 PIPELINE+="
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Select Modules\"
-  prompt: |- 
-    $(printf '%s/n' ${prompt})
+  prompt: \"${prompt}\"
   fields: 
     - select: \"Modules\"
       key: \"modules\"
@@ -146,13 +158,12 @@ PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   commands:
     ${refresh_commands}
-    - mkdir -p \"/tmp/\$\${BUILDKITE_JOB_ID}/\"
     - |-
       for module in \$\$(buildkite-agent meta-data get modules); do
-        terragrunt plan -out \"/tmp/\$\${BUILDKITE_JOB_ID}/\$\${module}\" --terragrunt-working-dir ${MODULE_DIR}/\$\${module} ${terragrunt_args}
-        buildkite-agent annotate \"**\$\${module}**\n\`\`\`\$\$(terragrunt show -no-color \"/tmp/\$\${BUILDKITE_JOB_ID}/\$\${module}\")\`\`\`\n\" --context \"\$\${module}\"
+        echo \"##### Planning deploy for \$\${module} ######\"
+        terragrunt plan --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args}
       done
-  plugins: ${step_plugins}
+${step_args}
 
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Apply Changes?\"
   prompt: Apply changes?
@@ -161,10 +172,10 @@ PIPELINE+="
   commands:
     ${refresh_commands}
     - |-
-      for workspace in \$\$(buildkite-agent meta-data get modules); do
-        terragrunt apply --terragrunt-working-dir ${MODULE_DIR}/\$\${workspace}
+      for module in \$\$(buildkite-agent meta-data get modules); do
+        terragrunt apply --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args}
       done
-  plugins: ${step_plugins}
+${step_args}
 "
 
 if [[ -n "${DEBUG_PIPELINE_OUTPUT}" ]]; then 

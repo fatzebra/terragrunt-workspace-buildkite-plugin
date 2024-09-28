@@ -25,7 +25,6 @@ steps:
   - command: ~
     plugins:
       - roleyfoley/terragrunt-workspace#v1.0.0:
-          name: "test"
           module_dir: "test/test/"
 ```
 
@@ -56,6 +55,10 @@ A list of directory/module names that can be used as part of this plugin
 ### `data_modules` (Optional, array)
 
 The directory names of the modules you want to run `terragrunt refresh` each time a plan or apply is run on the `modules` or `always_modules`. Sometimes you might have modules that only have data components that lookup passwords, parameters etc. Since these don't save there state to a backend you need to refresh them each time to get their outputs.
+
+### `terragrunt_args` (Optiona, array)
+
+A list of extra arguments to pass to any terragrunt commands
 
 ### `debug_pipeline_output` (Optional, string)
 

@@ -1,0 +1,12 @@
+[
+  {
+    "roleyfoley/terragrunt-workspace#main": {
+      "module_dir": "test/test/"
+    }
+  },
+  {
+    "docker#v5.8.0": {
+      "image": "alpine/terragrunt"
+    }
+  }
+]

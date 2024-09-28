@@ -8,20 +8,22 @@ load "$BATS_PLUGIN_PATH/load.bash"
 setup() {
   export BUILDKITE_LABEL="testing"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR="test/test"
-  export BUILDKITE_PLUGINS="[{\"github.com/roleyfoley/terragrunt-workspace#v1.0.0\":{\"module_dir\":\"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}\"}},{\"github.com/buildkite-plugins/docker-buildkite-plugin#v3.7.0\":{}}]"
-
+  export BUILDKITE_PLUGINS="$( jq -c '.' $PWD/tests/data/buildkite_plugins.json)"
   export OUTPUT_PATH="$PWD/tests/.outputs/"
   mkdir -p "${OUTPUT_PATH}"
+
+  export STEP_OUTPUT="$(jq -c '. | @text' $PWD/tests/data/step.json )"
 }
 
 
 @test "Generates a pipeline with a deploy module" { 
-  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
-
   MODULE="app"
+
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
 
   stub buildkite-agent \
     'meta-data exists "terragrunt-workspace-module-groups" : false' \
+    "step get --format json : echo '${STEP_OUTPUT}'" \
     'pipeline upload : echo Uploading pipeline'
 
   stub terragrunt \
@@ -58,6 +60,7 @@ setup() {
 
 @test "Generates a pipeline with a deploy module and refresh" { 
   MODULE="app"
+
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0="passwords"
 
@@ -66,6 +69,7 @@ setup() {
 
   stub buildkite-agent \
     'meta-data exists "terragrunt-workspace-module-groups" : false' \
+    "step get --format json : echo '${STEP_OUTPUT}'" \
     'pipeline upload : echo Uploading pipeline'
 
   run "$PWD/hooks/post-command"
@@ -86,7 +90,7 @@ setup() {
   # The first command of the plan step should be a refresh
   run yq '.steps[1].commands[0]' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
   assert_success
-  assert_output "terragrunt refresh --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}"  
+  assert_output "terragrunt refresh --terragrunt-working-dir \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\""  
 }
 
 @test "Generates a pipeline with a deploy module and a filter" { 
@@ -98,6 +102,7 @@ setup() {
 
   stub buildkite-agent \
     'meta-data exists "terragrunt-workspace-module-groups" : false' \
+    "step get --format json : echo '${STEP_OUTPUT}'" \
     'pipeline upload : echo Uploading pipeline'
 
   stub terragrunt \
