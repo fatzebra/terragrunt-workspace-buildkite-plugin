@@ -56,7 +56,7 @@ if [[ -z "${discovered_modules_list}" ]]; then
 fi
 
 for module in ${discovered_modules_list}; do 
-  discovered_modules+=("${module/"${PWD}/${MODULE_DIR}/"/""}")
+  discovered_modules+=("${module#*${MODULE_DIR}}")
 done
 
 echo ":building_construction: Discovered modules - $(printf '%s ' "${discovered_modules[@]}")"
