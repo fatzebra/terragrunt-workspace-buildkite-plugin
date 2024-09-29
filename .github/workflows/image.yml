@@ -2,7 +2,10 @@ name: Create and publish a Docker image
 
 on:
   push:
-    branches: ['release']
+    branches:
+      - main
+    tags: 
+      - "^v[1-9].[1-9].[1-9]$"
 
 env:
   REGISTRY: ghcr.io
@@ -26,7 +29,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
