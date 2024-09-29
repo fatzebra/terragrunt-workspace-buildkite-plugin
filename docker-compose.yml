@@ -12,3 +12,8 @@ services:
     volumes:
       - "./:/plugin"
 
+  shellcheck:
+    image: koalaman/shellcheck
+    command: ["/mnt/hooks/post-command" ]
+    volumes:
+      - "./:/mnt:ro"
