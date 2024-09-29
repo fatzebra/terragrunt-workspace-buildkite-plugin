@@ -184,6 +184,7 @@ ${step_args}
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
   commands:
     ${refresh_commands}
+    - mkdir -p .plans
     - buildkite-agent artifact download '.plans/**' .plans
     - |-
       for module in \$\$(buildkite-agent meta-data get modules); do
