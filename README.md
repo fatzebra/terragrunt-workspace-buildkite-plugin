@@ -93,7 +93,7 @@ steps:
       - roleyfoley/terragrunt-workspace#v1.2.4:
         module_dir: "test/test/"
       - docker#v5.11.0:
-        image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:v1"
+        image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:1"
         mount-buildkite-agent: true
 ```
 
