@@ -11,9 +11,9 @@ The pipeline consists of:
 - A block to confirm you want to run apply
 - A command step to run apply for each of the selected modules
 
-By default all modules found by terragrunt will be included in the block step, however you can filter this by provided a list of allowed modules. 
+By default all modules found by terragrunt will be included in the block step, however you can filter this by providing a list of allowed modules. 
 
-If you have modules that are just made up of data components that provide information to your other modules you can specify these modules under the data_modules option, before running the plan or apply commands on the selected modules each of the data modules will be refreshed. This builds a local state file since modules without resources don't save their state in terraform.
+If you have modules that are just made up of data components that provide information to your other modules you can add them under the data_modules option, before running the plan or apply commands each of the data modules will be refreshed. This builds a local state file since modules without resources don't save their state in terraform.
 
 
 ## Example
