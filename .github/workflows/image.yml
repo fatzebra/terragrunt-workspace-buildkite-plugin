@@ -1,4 +1,4 @@
-name: Create and publish a Docker image
+name: docker image
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
     tags: 
       - "^v[1-9].[1-9].[1-9]$"
+  pull_request:
 
 env:
   REGISTRY: ghcr.io
@@ -35,13 +36,18 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}
+            type=sha
 
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ github.ref == 'refs/heads/main' || github.ref_type == 'tag' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
       
@@ -50,5 +56,6 @@ jobs:
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          push-to-registry: ${{ github.ref == 'refs/heads/main' || github.ref_type == 'tag' }}
+
       
