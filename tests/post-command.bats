@@ -88,9 +88,9 @@ setup() {
   refute_output --partial "terragrunt plan --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}"
 
   # The first command of the plan step should be a refresh
-  run yq '.steps[1].commands[0]' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
+  run yq '.steps[1].command' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
   assert_success
-  assert_output "terragrunt refresh --terragrunt-working-dir \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\""  
+  assert_output --partial "terragrunt refresh --terragrunt-working-dir \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\""  
 }
 
 @test "Generates a pipeline with a deploy module and a filter" { 
@@ -126,7 +126,6 @@ setup() {
   assert_output $MODULE
 }
 
-
 @test "Generates a pipeline with a deploy module and plan encryption" { 
   MODULE="app"
   DANGER_MODULE="danger_module"
@@ -156,4 +155,43 @@ setup() {
 
   run yq '.steps[0].fields[0].options[0].value' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
   assert_output $MODULE
+}
+
+@test "Generates a pipeline with multiple refrehses and deploy modules" {
+  MODULE_1="app"
+  MODULE_2="db"
+
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0="passwords"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1="constants"
+
+  stub terragrunt \
+    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1}\"]}'"
+
+  stub buildkite-agent \
+    'meta-data exists "terragrunt-workspace-module-groups" : false' \
+    "step get --format json : echo '${STEP_OUTPUT}'" \
+    'pipeline upload : echo Uploading pipeline'
+
+  run "$PWD/hooks/post-command"
+  
+  assert_success
+  assert_output --partial ":chart_with_upwards_trend: Data modules - $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0 $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1 "
+  assert_line ":rocket: Modules for deployment - $MODULE_1 $MODULE_2 "
+  assert_line "Uploading pipeline"
+
+  unstub terragrunt  
+  unstub buildkite-agent
+
+  # The refresh module should never be planned
+  run yq '.' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
+  assert_success
+  refute_output --partial "terragrunt plan --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}"
+  refute_output --partial "terragrunt plan --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1}"
+
+  # The first command of the plan step should be a refresh
+  run yq '.steps[1].command' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
+  assert_success
+  assert_line --partial "terragrunt refresh --terragrunt-working-dir \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\""
+  assert_line --partial "terragrunt refresh --terragrunt-working-dir \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1}\""  
 }

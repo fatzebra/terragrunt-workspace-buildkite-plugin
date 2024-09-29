@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.2.3:
+      - roleyfoley/terragrunt-workspace#v1.2.4:
           module_dir: "test/test/"
 ```
 
