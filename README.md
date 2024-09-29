@@ -60,11 +60,13 @@ The directory names of the modules you want to run `terragrunt refresh` each tim
 
 A list of extra arguments to pass to any terragrunt commands
 
-
 ### `plan_encryption_kms_key_arn` (Optional, string)
 
-An AWS kms key ARN to use to encrypt the tfplan state when passing between jobs. tfplan can contain sensitive data that you might not want people who can read your pipeline and access artificates to see.
+An AWS kms key ARN to use to encrypt the tfplan state when passing between jobs. tfplan can contain sensitive data that you might not want people who can read your pipeline and access artifacts to see.
 
+The encryption process uses [sops](https://github.com/getsops/sops) to encrypt the file contents as the plan generally be over the 4kb limit of a single kms encrypt operation. 
+
+Due to a bug in sops you will need to have version v3.9.0 and above to perform the encryption operation without having a config file present.
 
 ### `debug_pipeline_output` (Optional, string)
 
