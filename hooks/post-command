@@ -27,6 +27,7 @@ function plugin_read_list_into_result() {
 
 MODULE_DIR="$(echo ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} | sed 's/\/$//')"
 DEBUG_PIPELINE_OUTPUT="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT-""}"
+PLAN_ENCRYPTION_KMS_KEY_ARN="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN-""}"
 
 # Terragrunt extra args
 if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_TERRAGRUNT_ARGS ; then
@@ -130,6 +131,15 @@ else
   refresh_commands=""
 fi
 
+# Plan encryption command 
+if [[ -n "${PLAN_ENCRYPTION_KMS_KEY_ARN}" ]] ; then
+  plan_encryption_command="sops encrypt -i --kms \"${PLAN_ENCRYPTION_KMS_KEY_ARN}\" \".plans/\$\${module}\""
+  plan_decryption_command="sops decrypt -i \".plans/\$\${module}\""
+else
+  plan_encryption_command=""
+  plan_decryption_command=""
+fi
+
 BASE_PIPELINE="steps:"
 PIPELINE="${BASE_PIPELINE}"
 
@@ -158,11 +168,14 @@ PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   commands:
     ${refresh_commands}
+    - mkdir -p .plans
     - |-
       for module in \$\$(buildkite-agent meta-data get modules); do
         echo \"##### Planning deploy for \$\${module} ######\"
-        terragrunt plan --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args}
+        terragrunt plan -out \"\$\${PWD}/.plans/\$\${module}\" --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args}
+        ${plan_encryption_command}
       done
+      buildkite-agent artifact upload \".plans/**\"
 ${step_args}
 
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Apply Changes?\"
@@ -171,9 +184,11 @@ ${step_args}
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
   commands:
     ${refresh_commands}
+    - buildkite-agent artifact download '.plans/**' .plans
     - |-
       for module in \$\$(buildkite-agent meta-data get modules); do
-        terragrunt apply --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args}
+        ${plan_decryption_command}
+        terragrunt apply --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args} \"\$\${PWD}/.plans/\$\${module}\"
       done
 ${step_args}
 "

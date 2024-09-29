@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.0.0:
+      - roleyfoley/terragrunt-workspace#v1.2.0:
           module_dir: "test/test/"
 ```
 
@@ -56,9 +56,15 @@ A list of directory/module names that can be used as part of this plugin
 
 The directory names of the modules you want to run `terragrunt refresh` each time a plan or apply is run on the `modules` or `always_modules`. Sometimes you might have modules that only have data components that lookup passwords, parameters etc. Since these don't save there state to a backend you need to refresh them each time to get their outputs.
 
-### `terragrunt_args` (Optiona, array)
+### `terragrunt_args` (Optional, array)
 
 A list of extra arguments to pass to any terragrunt commands
+
+
+### `plan_encryption_kms_key_arn` (Optional, string)
+
+An AWS kms key ARN to use to encrypt the tfplan state when passing between jobs. tfplan can contain sensitive data that you might not want people who can read your pipeline and access artificates to see.
+
 
 ### `debug_pipeline_output` (Optional, string)
 

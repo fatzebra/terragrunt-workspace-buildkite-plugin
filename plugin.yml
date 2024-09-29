@@ -5,6 +5,7 @@ requirements:
   - terragrunt
   - terraform
   - jq
+  - sops
 configuration:
   properties:
     module_dir:
@@ -25,6 +26,10 @@ configuration:
 
     debug_pipeline_output:
       description: A file path to output the pipeline to for testing
+      type: string
+
+    plan_encryption_kms_key_arn:
+      description: The arn of a kms key to encrypt the plan content when passing between steps
       type: string
 
   required: 

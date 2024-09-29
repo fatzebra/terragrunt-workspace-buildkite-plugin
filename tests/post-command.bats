@@ -125,3 +125,35 @@ setup() {
   run yq '.steps[0].fields[0].options[0].value' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
   assert_output $MODULE
 }
+
+
+@test "Generates a pipeline with a deploy module and plan encryption" { 
+  MODULE="app"
+  DANGER_MODULE="danger_module"
+
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="${MODULE}"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN="arn:aws:kms:ap-southeast-2:123456789012:key/5a14434f-9d4e-55dh-27df-f32711fe0492"
+
+  stub buildkite-agent \
+    'meta-data exists "terragrunt-workspace-module-groups" : false' \
+    "step get --format json : echo '${STEP_OUTPUT}'" \
+    'pipeline upload : echo Uploading pipeline'
+
+  stub terragrunt \
+    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\":[\"$PWD/test/test/$MODULE\",\"$PWD/test/test/$DANGER_MODULE\"]}'"
+
+  run "$PWD/hooks/post-command"
+
+  assert_success
+  
+  unstub buildkite-agent
+  unstub terragrunt 
+
+  # Is pipeline valid yaml
+  run yq '.' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
+  assert_success
+
+  run yq '.steps[0].fields[0].options[0].value' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
+  assert_output $MODULE
+}
