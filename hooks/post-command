@@ -182,7 +182,7 @@ elif  (( ${#deploy_modules[@]} > 1 )); then
 fi
 
 # Create an annotation with the details of what we found
-module_notes=("- :magnifying_glass: Discovered moodules $(printf '\n  - %s' "${discovered_modules[@]}")")
+module_notes=("- :mage: Discovered moodules $(printf '\n  - %s' "${discovered_modules[@]}")")
 
 if [[ -n "${data_modules[*]}" ]]; then
   module_notes+=("- :chart_with_upwards_trend: Data modules $(printf '\n  - %s' "${data_modules[@]}")")
@@ -190,7 +190,7 @@ fi
 if [[ -n "${allowed_modules[*]}" ]]; then 
   module_notes+=("- :policeman: Allowed modules $(printf '\n  - %s' "${allowed_modules[@]}")")
 fi
-module_notes+=("- :arrow_forward: Deploy modules $(printf '\n  - %s' "${deploy_modules[@]}")")
+module_notes+=("- :black_right_pointing_triangle_with_double_vertical_bar: Deploy modules $(printf '\n  - %s' "${deploy_modules[@]}")")
 
 annotation=(
   ":terragrunt: **${BUILDKITE_LABEL}**"
@@ -203,6 +203,7 @@ buildkite-agent annotate "$(printf '%s\n' "${annotation[@]}")" --style "info" --
 PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   command: |-
+    buildkite-agent annotate \"- :arrow_forward: Selected moodules \$\$(printf '\n  - %s' \"\$\$(buildkite-agent meta-data get modules)\" --append --context \"${BUILDKITE_STEP_ID}\"
 ${refresh_commands[@]}
     mkdir -p .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
