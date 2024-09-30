@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.3.2:
+      - roleyfoley/terragrunt-workspace#v1.3.3:
           module_dir: "test/test/"
 ```
 
@@ -48,7 +48,7 @@ A docker image is avialable which includes the required tools to run this plugin
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.3.2:
+      - roleyfoley/terragrunt-workspace#v1.3.3:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:1"
