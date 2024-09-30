@@ -203,7 +203,7 @@ buildkite-agent annotate "$(printf '%s\n' "${annotation[@]}")" --style "info" --
 PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   command: |-
-    buildkite-agent annotate \"- :arrow_forward: Selected moodules \$\$(printf '\n  - %s' \"\$\$(buildkite-agent meta-data get modules)\" --append --context \"${BUILDKITE_STEP_ID}\"
+    buildkite-agent annotate \"- :arrow_forward: Selected moodules \$\$(printf '\n  - %s' \"\$\$(buildkite-agent meta-data get modules)\")\" --append --context \"${BUILDKITE_STEP_ID}\"
 ${refresh_commands[@]}
     mkdir -p .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
