@@ -5,14 +5,17 @@ load "$BATS_PLUGIN_PATH/load.bash"
 # Uncomment the following line to debug stub failures
 #export BUILDKITE_AGENT_STUB_DEBUG=/dev/tty
 
+setup_file() { 
+  export OUTPUT_PATH="$PWD/tests/.outputs/"
+  mkdir -p "${OUTPUT_PATH}"
+  rm -f ${OUTPUT_PATH}/*
+}
+
 setup() {
   export BUILDKITE_STEP_ID="080b7d73-986d-4a39-a510-b34f9faf4710"
   export BUILDKITE_LABEL="testing"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR="test/test"
   export BUILDKITE_PLUGINS="$( jq -c '.' $PWD/tests/data/buildkite_plugins.json)"
-  export OUTPUT_PATH="$PWD/tests/.outputs/"
-  mkdir -p "${OUTPUT_PATH}"
-
   export STEP_OUTPUT="$(jq -c '.' $PWD/tests/data/step.json )"
 }
 
