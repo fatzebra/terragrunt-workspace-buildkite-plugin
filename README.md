@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.2.4:
+      - roleyfoley/terragrunt-workspace#v1.3.1:
           module_dir: "test/test/"
 ```
 
@@ -41,6 +41,21 @@ If you have the following terragrunt setup
 
 Then the block will ask you to deploy the db and web modules
 
+
+A docker image is avialable which includes the required tools to run this plugin. To use it 
+
+```yml
+steps:
+  - command: ~
+    plugins:
+      - roleyfoley/terragrunt-workspace#v1.3.1:
+        module_dir: "test/test/"
+      - docker#v5.11.0:
+        image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:1"
+        mount-buildkite-agent: true
+```
+
+The buildkite agent will need to be available in the docker container for the plugin to work
 
 ## Configuration
 
@@ -82,22 +97,6 @@ To get around this we can also read the module groups output from a meta-data ke
 buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir <the configured module_dir for the plugin>)
 ```
 
-## Docker Image
-
-A docker image is avialable which includes the required tools to run this plugin. To use it 
-
-```yml
-steps:
-  - command: ~
-    plugins:
-      - roleyfoley/terragrunt-workspace#v1.3.0:
-        module_dir: "test/test/"
-      - docker#v5.11.0:
-        image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:1"
-        mount-buildkite-agent: true
-```
-
-The buildkite agent will need to be available in the docker container for the plugin to work
 
 ## Developing
 
