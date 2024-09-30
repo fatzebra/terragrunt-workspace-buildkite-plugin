@@ -5,14 +5,17 @@ load "$BATS_PLUGIN_PATH/load.bash"
 # Uncomment the following line to debug stub failures
 #export BUILDKITE_AGENT_STUB_DEBUG=/dev/tty
 
+setup_file() { 
+  export OUTPUT_PATH="$PWD/tests/.outputs/"
+  mkdir -p "${OUTPUT_PATH}"
+  rm -f ${OUTPUT_PATH}/*
+}
+
 setup() {
   export BUILDKITE_STEP_ID="080b7d73-986d-4a39-a510-b34f9faf4710"
   export BUILDKITE_LABEL="testing"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR="test/test"
   export BUILDKITE_PLUGINS="$( jq -c '.' $PWD/tests/data/buildkite_plugins.json)"
-  export OUTPUT_PATH="$PWD/tests/.outputs/"
-  mkdir -p "${OUTPUT_PATH}"
-
   export STEP_OUTPUT="$(jq -c '.' $PWD/tests/data/step.json )"
 }
 
@@ -35,7 +38,7 @@ setup() {
 
   assert_success
   assert_output --partial "Uploading pipeline"
-  assert_output --partial ":rocket: Modules for deployment - $MODULE"
+  assert_output --partial "Modules for deployment - $MODULE"
 
   unstub buildkite-agent
   unstub terragrunt 
@@ -78,8 +81,8 @@ setup() {
   run "$PWD/hooks/post-command"
   
   assert_success
-  assert_line ":chart_with_upwards_trend: Data modules - $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0 "
-  assert_line ":rocket: Modules for deployment - $MODULE "
+  assert_line "Data modules - $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0 "
+  assert_line "Modules for deployment - $MODULE "
   assert_line "Uploading pipeline"
 
   unstub terragrunt  
@@ -116,8 +119,8 @@ setup() {
 
   assert_success
   assert_line "Uploading pipeline"
-  assert_line ":building_construction: Discovered modules - $MODULE $DANGER_MODULE "
-  assert_line ":policeman: Modules after filtering - $MODULE "
+  assert_line "Discovered modules - $MODULE $DANGER_MODULE "
+  assert_line "Modules after filtering - $MODULE "
 
   unstub buildkite-agent
   unstub terragrunt 
@@ -182,8 +185,8 @@ setup() {
   run "$PWD/hooks/post-command"
   
   assert_success
-  assert_output --partial ":chart_with_upwards_trend: Data modules - $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0 $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1 "
-  assert_line ":rocket: Modules for deployment - $MODULE_1 $MODULE_2 "
+  assert_output --partial "Data modules - $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0 $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1 "
+  assert_line "Modules for deployment - $MODULE_1 $MODULE_2 "
   assert_line "Uploading pipeline"
 
   unstub terragrunt  
@@ -219,9 +222,9 @@ setup() {
 
   run "$PWD/hooks/post-command"
   
-  assert_success
-  assert_line "No modules found for deployment, skipping pipeline generation"
-  refute_line ":rocket: Modules for deployment - $MODULE_1 $MODULE_2 "
+  assert_failure
+  assert_line "❌ No modules found for deployment"
+  refute_line "Modules for deployment - $MODULE_1 $MODULE_2 "
   refute_line "Uploading pipeline"
 
   unstub terragrunt  
