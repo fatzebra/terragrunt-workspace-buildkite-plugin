@@ -6,7 +6,7 @@ The plugin generates a dynamic pipeline based on the modules discovered by terra
 
 The pipeline consists of:
 
-- A block step which allows you to select the modules to apply. This is ordered based on how it will be applied
+- if more than 1 module is found to apply, A block step which allows you to select the modules to apply. This is ordered based on how it will be applied
 - A command step which will run a plan for each of the selected modules and provide the output
 - A block to confirm you want to run apply
 - A command step to run apply for each of the selected modules
@@ -90,7 +90,7 @@ A docker image is avialable which includes the required tools to run this plugin
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.2.4:
+      - roleyfoley/terragrunt-workspace#v1.3.0:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:1"

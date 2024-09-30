@@ -59,8 +59,12 @@ done
 
 echo ":building_construction: Discovered modules - $(printf '%s ' "${discovered_modules[@]}")"
 
+allowed_modules=()
+
 # Filter based on the allowed modules
 if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES ; then
+  allowed_modules=("${result[@]}")
+
   available_modules=()
   for discovered_module in "${discovered_modules[@]}"; do
     for allowed_module in "${result[@]}" ; do 
@@ -73,6 +77,7 @@ if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MO
   echo ":policeman: Modules after filtering - $(printf '%s ' "${available_modules[@]}")"
 else 
   available_modules=("${discovered_modules[@]}")
+  allowed_modules=("")
 fi
 
 
@@ -137,12 +142,29 @@ fi
 BASE_PIPELINE="steps:"
 PIPELINE="${BASE_PIPELINE}"
 
-prompt="Select the modules to deploy"
-if [[ -n "${data_modules[*]}" ]]; then
-  prompt+="\n:chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")"
-fi
+# Determine how to display the deployment
+if (( ${#deploy_modules[@]} == 0 )); then 
+  buildkite-agent annotate ":terragrunt: **${BUILDKITE_LABEL}**\nNo modules found for deployment" --style "warning" --context "${BUILDKITE_STEP_ID}"
 
-PIPELINE+="
+  echo "No modules found for deployment, skipping pipeline generation"
+  exit 0
+
+elif (( ${#deploy_modules[@]} == 1  )); then 
+  # shellcheck disable=SC2124
+  PIPELINE+="
+- label: \":terragrunt: [${BUILDKITE_LABEL}] Setting Module to Deploy\"
+  command: |- 
+    buildkite-agent meta-data set modules \"${deploy_modules[@]}\"
+"
+
+elif  (( ${#deploy_modules[@]} > 1 )); then
+
+  prompt="Select the modules to deploy"
+  if [[ -n "${data_modules[*]}" ]]; then
+    prompt+="\n:chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")"
+  fi
+
+  PIPELINE+="
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Select Modules\"
   prompt: \"${prompt}\"
   fields: 
@@ -152,11 +174,30 @@ PIPELINE+="
       options: 
 "
 
-for module in "${deploy_modules[@]}" ; do
-  PIPELINE+="
-        - value: \"${module}\"
-  "
-done
+  for module in "${deploy_modules[@]}" ; do
+    PIPELINE+="
+      - value: \"${module}\"
+"
+  done
+fi
+
+# Create an annotation with the details of what we found
+module_notes=("- :magnifying_glass: Discovered moodules $(printf '\n  - %s' "${discovered_modules[@]}")")
+
+if [[ -n "${data_modules[*]}" ]]; then
+  module_notes+=("- :chart_with_upwards_trend: Data modules $(printf '\n  - %s' "${data_modules[@]}")")
+fi
+if [[ -n "${allowed_modules[*]}" ]]; then 
+  module_notes+=("- :policeman: Allowed modules $(printf '\n  - %s' "${allowed_modules[@]}")")
+fi
+module_notes+=("- :arrow_forward: Deploy modules $(printf '\n  - %s' "${deploy_modules[@]}")")
+
+annotation=(
+  ":terragrunt: **${BUILDKITE_LABEL}**"
+  "${module_notes[@]}"
+)
+
+buildkite-agent annotate "$(printf '%s\n' "${annotation[@]}")" --style "info" --context "${BUILDKITE_STEP_ID}"
 
 # shellcheck disable=SC2124
 PIPELINE+="
