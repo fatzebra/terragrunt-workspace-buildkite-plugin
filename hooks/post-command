@@ -182,15 +182,15 @@ elif  (( ${#deploy_modules[@]} > 1 )); then
 fi
 
 # Create an annotation with the details of what we found
-module_notes=("- :mage: Discovered modules $(printf '\n  - %s' "${discovered_modules[@]}")")
+module_notes=(":mage: Discovered modules $(printf '\n- %s' "${discovered_modules[@]}")")
 
 if [[ -n "${data_modules[*]}" ]]; then
-  module_notes+=("- :chart_with_upwards_trend: Data modules $(printf '\n  - %s' "${data_modules[@]}")")
+  module_notes+=(":chart_with_upwards_trend: Data modules $(printf '\n- %s' "${data_modules[@]}")")
 fi
 if [[ -n "${allowed_modules[*]}" ]]; then 
-  module_notes+=("- :policeman: Allowed modules $(printf '\n  - %s' "${allowed_modules[@]}")")
+  module_notes+=(":policeman: Allowed modules $(printf '\n- %s' "${allowed_modules[@]}")")
 fi
-module_notes+=("- :black_right_pointing_triangle_with_double_vertical_bar: Deploy modules $(printf '\n  - %s' "${deploy_modules[@]}")")
+module_notes+=(":black_right_pointing_triangle_with_double_vertical_bar: Deploy modules $(printf '\n- %s' "${deploy_modules[@]}")")
 
 annotation=(
   ":terragrunt: **${BUILDKITE_LABEL}**"
@@ -203,12 +203,12 @@ echo "$(printf '%s\n' "${annotation[@]}")" | buildkite-agent annotate --style "i
 PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   command: |-
-    echo \"- :arrow_forward: Selected modules\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
+    echo \":arrow_forward: Selected modules\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
 ${refresh_commands[@]}
     mkdir -p .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
       echo \"- Planning deploy for \$\${module}\"
-      echo \"  - \$\${module}\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
+      echo \"- \$\${module}\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
       terragrunt plan -out \"\$\${PWD}/.plans/\$\${module}\" --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args[@]}
       ${plan_encryption_command}
     done
