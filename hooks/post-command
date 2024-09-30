@@ -57,7 +57,7 @@ for module in ${discovered_modules_list}; do
   discovered_modules+=("${module#*"${MODULE_DIR}"/}")
 done
 
-echo ":building_construction: Discovered modules - $(printf '%s ' "${discovered_modules[@]}")"
+echo "Discovered modules - $(printf '%s ' "${discovered_modules[@]}")"
 
 allowed_modules=()
 
@@ -74,7 +74,7 @@ if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MO
     done
   done
 
-  echo ":policeman: Modules after filtering - $(printf '%s ' "${available_modules[@]}")"
+  echo "Modules after filtering - $(printf '%s ' "${available_modules[@]}")"
 else 
   available_modules=("${discovered_modules[@]}")
   allowed_modules=("")
@@ -98,12 +98,12 @@ if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODUL
     fi
   done
 
-  echo ":chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")"
+  echo "Data modules - $(printf '%s ' "${data_modules[@]}")"
 else
   deploy_modules=("${available_modules[@]}")
 fi
 
-echo ":rocket: Modules for deployment - $(printf '%s ' "${deploy_modules[@]}")"
+echo "Modules for deployment - $(printf '%s ' "${deploy_modules[@]}")"
 
 # Get the plugin settings for the source job so we can apply them - minus this one to the generated steps
 step="$(buildkite-agent step get --format json)"
@@ -146,8 +146,8 @@ PIPELINE="${BASE_PIPELINE}"
 if (( ${#deploy_modules[@]} == 0 )); then 
   buildkite-agent annotate ":terragrunt: **${BUILDKITE_LABEL}**\nNo modules found for deployment" --style "warning" --context "${BUILDKITE_STEP_ID}"
 
-  echo "No modules found for deployment, skipping pipeline generation"
-  exit 0
+  printf "\U274C No modules found for deployment"
+  exit 1
 
 elif (( ${#deploy_modules[@]} == 1  )); then 
   # shellcheck disable=SC2124
@@ -159,14 +159,9 @@ elif (( ${#deploy_modules[@]} == 1  )); then
 
 elif  (( ${#deploy_modules[@]} > 1 )); then
 
-  prompt="Select the modules to deploy"
-  if [[ -n "${data_modules[*]}" ]]; then
-    prompt+="\n:chart_with_upwards_trend: Data modules - $(printf '%s ' "${data_modules[@]}")"
-  fi
-
   PIPELINE+="
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Select Modules\"
-  prompt: \"${prompt}\"
+  prompt: \"Select the modules to deploy\"
   fields: 
     - select: \"Modules\"
       key: \"modules\"
@@ -182,33 +177,36 @@ elif  (( ${#deploy_modules[@]} > 1 )); then
 fi
 
 # Create an annotation with the details of what we found
-module_notes=(":mage: Discovered modules $(printf '\n- %s' "${discovered_modules[@]}")")
+module_notes=(":mage: Discovered modules $(printf '\n  - %s' "${discovered_modules[@]}")")
 
 if [[ -n "${data_modules[*]}" ]]; then
-  module_notes+=(":chart_with_upwards_trend: Data modules $(printf '\n- %s' "${data_modules[@]}")")
+  module_notes+=(":chart_with_upwards_trend: Data modules $(printf '\n  - %s' "${data_modules[@]}")")
 fi
 if [[ -n "${allowed_modules[*]}" ]]; then 
-  module_notes+=(":policeman: Allowed modules $(printf '\n- %s' "${allowed_modules[@]}")")
+  module_notes+=(":policeman: Allowed modules $(printf '\n  - %s' "${allowed_modules[@]}")")
 fi
-module_notes+=(":black_right_pointing_triangle_with_double_vertical_bar: Deploy modules $(printf '\n- %s' "${deploy_modules[@]}")")
+module_notes+=(":black_right_pointing_triangle_with_double_vertical_bar: Deploy modules $(printf '\n  - %s' "${deploy_modules[@]}")")
 
 annotation=(
   ":terragrunt: **${BUILDKITE_LABEL}**"
+  '<details><summary>Module Details</summary>'
   "${module_notes[@]}"
+  '</details>'
 )
 
-echo "$(printf '%s\n' "${annotation[@]}")" | buildkite-agent annotate --style "info" --context "${BUILDKITE_STEP_ID}"
+printf '\n\n%s' "${annotation[@]}" | buildkite-agent annotate --style "info" --context "${BUILDKITE_STEP_ID}"
 
 # shellcheck disable=SC2124
 PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
   command: |-
-    echo \":arrow_forward: Selected modules\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
+    printf '\n\n%s' \"---\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
+    printf '\n\n%s' \":rocket: Selected modules\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
 ${refresh_commands[@]}
     mkdir -p .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
-      echo \"- Planning deploy for \$\${module}\"
-      echo \"- \$\${module}\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
+      echo \"--- planning \$\${module}\"
+      printf '\n%s' \"  - \$\${module}\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
       terragrunt plan -out \"\$\${PWD}/.plans/\$\${module}\" --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args[@]}
       ${plan_encryption_command}
     done
@@ -224,6 +222,7 @@ ${refresh_commands[@]}
     mkdir -p .plans
     buildkite-agent artifact download '.plans/**' .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
+      echo \"--- applying \$\${module}\"
       ${plan_decryption_command}
       terragrunt apply --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args[@]} \"\$\${PWD}/.plans/\$\${module}\"
     done
