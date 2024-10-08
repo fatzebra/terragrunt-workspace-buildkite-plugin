@@ -1,7 +1,7 @@
 services:
   lint:
     image: buildkite/plugin-linter
-    command: ['--id', 'roleyfoley/terragrunt-workspace']
+    command: ['--id', 'fatzebra/terragrunt-workspace']
     volumes:
       - ".:/plugin:ro"
 

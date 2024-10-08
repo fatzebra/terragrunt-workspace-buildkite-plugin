@@ -49,8 +49,12 @@ discovered_modules_list="$(echo "${module_groups}" | jq -r '[keys[] as $k | .[$k
 discovered_modules=()
 
 if [[ -z "${discovered_modules_list}" ]]; then
-  echo "No Modules found"
-  exit 1
+  printf "\U274C No modules disovered"
+  if [[ "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES}" == "false"  ]]; then
+    exit 0
+  else 
+    exit 1
+  fi
 fi
 
 for module in ${discovered_modules_list}; do 
@@ -147,8 +151,12 @@ if (( ${#deploy_modules[@]} == 0 )); then
   buildkite-agent annotate ":terragrunt: **${BUILDKITE_LABEL}**\nNo modules found for deployment" --style "warning" --context "${BUILDKITE_STEP_ID}"
 
   printf "\U274C No modules found for deployment"
-  exit 1
-
+  if [[ "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES}" == "false"  ]]; then
+    exit 0
+  else 
+    exit 1
+  fi
+  
 elif (( ${#deploy_modules[@]} == 1  )); then 
   # shellcheck disable=SC2124
   PIPELINE+="

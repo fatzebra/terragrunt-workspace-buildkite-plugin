@@ -1,6 +1,6 @@
 [
   {
-    "roleyfoley/terragrunt-workspace#main": {
+    "fatzebra/terragrunt-workspace#main": {
       "module_dir": "test/test/"
     }
   },

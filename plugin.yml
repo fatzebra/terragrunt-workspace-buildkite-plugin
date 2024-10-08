@@ -1,6 +1,6 @@
 name: Terragrunt Workspace Deploy
 description: Helps with terragrunt workspace deployments
-author: https://github.com/roleyfoley
+author: https://github.com/fatzebra
 requirements: 
   - terragrunt
   - terraform
@@ -31,6 +31,11 @@ configuration:
     plan_encryption_kms_key_arn:
       description: The arn of a kms key to encrypt the plan content when passing between steps
       type: string
+
+    fail_on_no_modules:
+      description: Should the pipeline step if no modules are found for deploy
+      type: boolean
+      default: true
 
   required: 
     - module_dir
