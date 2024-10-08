@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.3.4:
+      - fatzebra/terragrunt-workspace#v1.4.0:
           module_dir: "test/test/"
 ```
 
@@ -48,10 +48,10 @@ A docker image is avialable which includes the required tools to run this plugin
 steps:
   - command: ~
     plugins:
-      - roleyfoley/terragrunt-workspace#v1.3.4:
+      - fatzebra/terragrunt-workspace#v1.3.4:
         module_dir: "test/test/"
       - docker#v5.11.0:
-        image: "ghcr.io/roleyfoley/terragrunt-workspace-buildkite-plugin:1"
+        image: "ghcr.io/fatzebra/terragrunt-workspace-buildkite-plugin:1"
         mount-buildkite-agent: true
 ```
 
@@ -86,6 +86,10 @@ Due to a bug in sops you will need to have version v3.9.0 and above to perform t
 ### `debug_pipeline_output` (Optional, string)
 
 Writes the pipeline to the nominated output path
+
+### `fail_on_no_modules` (Optional, boolean)
+
+If no modules are found for deployment should the pipeline fail
 
 ## Module Discovery 
 

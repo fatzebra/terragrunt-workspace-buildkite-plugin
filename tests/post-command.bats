@@ -15,6 +15,7 @@ setup() {
   export BUILDKITE_STEP_ID="080b7d73-986d-4a39-a510-b34f9faf4710"
   export BUILDKITE_LABEL="testing"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR="test/test"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES="true"
   export BUILDKITE_PLUGINS="$( jq -c '.' $PWD/tests/data/buildkite_plugins.json)"
   export STEP_OUTPUT="$(jq -c '.' $PWD/tests/data/step.json )"
 }
@@ -223,6 +224,33 @@ setup() {
   run "$PWD/hooks/post-command"
   
   assert_failure
+  assert_line "❌ No modules found for deployment"
+  refute_line "Modules for deployment - $MODULE_1 $MODULE_2 "
+  refute_line "Uploading pipeline"
+
+  unstub terragrunt  
+  unstub buildkite-agent
+}
+
+@test "Exits happy when no modules can be found to use and no modules set to false" { 
+  MODULE_1="app"
+  MODULE_2="db"
+
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="other"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES="false"
+
+  stub terragrunt \
+    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\"]}'"
+
+  stub buildkite-agent \
+    'meta-data exists "terragrunt-workspace-module-groups" : false' \
+    "step get --format json : echo '${STEP_OUTPUT}'" \
+    'annotate \* \* \* \* \* \* : echo Noted'
+
+  run "$PWD/hooks/post-command"
+  
+  assert_success
   assert_line "❌ No modules found for deployment"
   refute_line "Modules for deployment - $MODULE_1 $MODULE_2 "
   refute_line "Uploading pipeline"
