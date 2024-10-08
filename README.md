@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.0:
+      - fatzebra/terragrunt-workspace#v1.4.1:
           module_dir: "test/test/"
 ```
 
@@ -48,7 +48,7 @@ A docker image is avialable which includes the required tools to run this plugin
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.3.4:
+      - fatzebra/terragrunt-workspace#v1.4.1:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "ghcr.io/fatzebra/terragrunt-workspace-buildkite-plugin:1"
