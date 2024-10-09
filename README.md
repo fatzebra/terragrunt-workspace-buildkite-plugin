@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.2:
+      - fatzebra/terragrunt-workspace#v1.4.3:
           module_dir: "test/test/"
 ```
 
@@ -41,21 +41,25 @@ If you have the following terragrunt setup
 
 Then the block will ask you to deploy the db and web modules
 
+### Module Discovery 
 
-If you agents don't have terragrunt/terraform installed you can use a docker agent to run the commands. We recommend the [devopsinfra/docker-terragrunt](https://hub.docker.com/r/devopsinfra/docker-terragrunt) as this has all the tools you need to use this plugin
+Modules are discovered using the terragrunt command `terragrunt output-module-groups` during a post-command hook, so if you don't have terragrunt installed on your agent and instead use the docker or docker-compose plugins this will fail to run. We recommend the [devopsinfra/docker-terragrunt](https://hub.docker.com/r/devopsinfra/docker-terragrunt) docker image with the docker plugin, the docker image has all the tools requried and the docker plugin saves having to have a docker-compose file.
+
+After adding the docker plugin you also need to run the module discovery as a command, this is then used by the plugin to run the deployment.
+
 
 ```yml
 steps:
-  - command: ~
+  - command: buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir /test/test)"
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.2:
+      - fatzebra/terragrunt-workspace#v1.4.3:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "devopsinfra/docker-terragrunt:aws-tf-1.9.7-tg-0.67.16"
         mount-buildkite-agent: true
 ```
 
-The buildkite agent will need to be available in the docker container for the plugin to work
+The plugin also copies the env, plugin and agent configuration to any steps it generates so this will be applied for subsequent steps.
 
 ## Configuration
 
@@ -91,23 +95,13 @@ Writes the pipeline to the nominated output path
 
 If no modules are found for deployment should the pipeline fail
 
-## Module Discovery 
-
-Modules are discovered using the terragrunt command `terragrunt output-module-groups` during a post-command hook, so if you don't have terragrunt installed on your agent and instead use the docker or docker-compose plugins this will fail to run. 
-
-To get around this we can also read the module groups output from a meta-data key. Run the following command either in the command step where the plugin is installed or any command before.
-
-```
-buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir <the configured module_dir for the plugin>)"
-```
-
 
 ## Developing
 
 To run the tests:
 
 ```shell
-docker-compose run --rm tests
+docker-compose run --rm test
 ```
 
 Before pushing a PR please run 

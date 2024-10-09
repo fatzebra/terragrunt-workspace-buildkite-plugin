@@ -129,6 +129,7 @@ step_args=("$(printf '  %s\n' "${step_args[@]}")")
 # Data Module Commands
 refresh_commands=()
 for module in "${data_modules[@]}" ; do
+  refresh_commands+=("echo \"~~~ refreshing ${module}\"")
   refresh_commands+=("terragrunt refresh --terragrunt-working-dir \"${MODULE_DIR}/${module}\" ${terragrunt_args[@]}")
 done
 
