@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.1:
+      - fatzebra/terragrunt-workspace#v1.4.2:
           module_dir: "test/test/"
 ```
 
@@ -42,16 +42,16 @@ If you have the following terragrunt setup
 Then the block will ask you to deploy the db and web modules
 
 
-A docker image is avialable which includes the required tools to run this plugin. To use it 
+If you agents don't have terragrunt/terraform installed you can use a docker agent to run the commands. We recommend the [devopsinfra/docker-terragrunt](https://hub.docker.com/r/devopsinfra/docker-terragrunt) as this has all the tools you need to use this plugin
 
 ```yml
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.1:
+      - fatzebra/terragrunt-workspace#v1.4.2:
         module_dir: "test/test/"
       - docker#v5.11.0:
-        image: "ghcr.io/fatzebra/terragrunt-workspace-buildkite-plugin:1"
+        image: "devopsinfra/docker-terragrunt:aws-tf-1.9.7-tg-0.67.16"
         mount-buildkite-agent: true
 ```
 
@@ -98,7 +98,7 @@ Modules are discovered using the terragrunt command `terragrunt output-module-gr
 To get around this we can also read the module groups output from a meta-data key. Run the following command either in the command step where the plugin is installed or any command before.
 
 ```
-buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir <the configured module_dir for the plugin>)
+buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir <the configured module_dir for the plugin>)"
 ```
 
 
@@ -109,6 +109,15 @@ To run the tests:
 ```shell
 docker-compose run --rm tests
 ```
+
+Before pushing a PR please run 
+
+```shell 
+docker-compose run --rm lint 
+docker-compose run --rm shellcheck
+```
+
+To validate the plugin configuration and check for any potential issues in the shell scripts
 
 ## Contributing
 
