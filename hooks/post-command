@@ -232,11 +232,11 @@ ${step_args[@]}
   prompt: Apply changes?
 
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
-  key: \"apply-${JOB_ID}\"
+  key: \"apply:${JOB_ID}\"
   command: |-
 ${refresh_commands[@]}
     mkdir -p .plans
-    buildkite-agent artifact download '.plans/**' .plans --step 'plan-${JOB_ID}'
+    buildkite-agent artifact download '.plans/**' .plans --step 'plan:${JOB_ID}'
     for module in \$\$(buildkite-agent meta-data get modules); do
       echo \"+++ applying \$\${module}\"
       ${plan_decryption_command}
