@@ -15,7 +15,6 @@ setup() {
   export BUILDKITE_STEP_ID="080b7d73-986d-4a39-a510-b34f9faf4710"
   export BUILDKITE_LABEL="testing"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR="test/test"
-  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES="true"
   export BUILDKITE_PLUGINS="$( jq -c '.' $PWD/tests/data/buildkite_plugins.json)"
   export STEP_OUTPUT="$(jq -c '.' $PWD/tests/data/step.json )"
 }
@@ -54,13 +53,13 @@ setup() {
   run yq '.steps[0].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
   assert_output ":terragrunt: [${BUILDKITE_LABEL}] Setting Module to Deploy"
 
-  run yq '.steps[1].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
+  run yq '.steps[2].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
   assert_output ":terragrunt: [${BUILDKITE_LABEL}] Plan Modules"
 
-  run yq '.steps[2].block' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
+  run yq '.steps[3].block' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
   assert_output ":terragrunt: [${BUILDKITE_LABEL}] Apply Changes?"
 
-  run yq '.steps[3].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
+  run yq '.steps[4].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
   assert_output ":terragrunt: [${BUILDKITE_LABEL}] Apply Modules"
 }
 
@@ -95,7 +94,7 @@ setup() {
   refute_output --partial "terragrunt plan --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}"
 
   # The first command of the plan step should be a refresh
-  run yq '.steps[1].command' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
+  run yq '.steps[2].command' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
   assert_success
   assert_output --partial "terragrunt refresh --terragrunt-working-dir \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\""  
 }
