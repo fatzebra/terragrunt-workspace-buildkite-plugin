@@ -27,6 +27,7 @@ function plugin_read_list_into_result() {
 
 MODULE_DIR="$(echo "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}" | sed 's/\/$//')"
 FAIL_ON_NO_MODULES="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES-"true"}"
+JOB_ID="${MODULE_DIR/\//:}"
 
 # Terragrunt extra args
 if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_TERRAGRUNT_ARGS ; then
@@ -208,10 +209,11 @@ annotation=(
 
 printf '\n\n%s' "${annotation[@]}" | buildkite-agent annotate --style "info" --context "${BUILDKITE_STEP_ID}"
 
+
 # shellcheck disable=SC2124
 PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
-  key: \"plan-${MODULE_DIR}\"
+  key: \"plan:${JOB_ID}\"
   command: |-
     printf '\n\n%s' \"---\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
     printf '\n\n%s' \":rocket: Selected modules\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
@@ -230,11 +232,11 @@ ${step_args[@]}
   prompt: Apply changes?
 
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
-  key: \"apply-${MODULE_DIR}\"
+  key: \"apply-${JOB_ID}\"
   command: |-
 ${refresh_commands[@]}
     mkdir -p .plans
-    buildkite-agent artifact download '.plans/**' .plans --step 'plan-${MODULE_DIR}'
+    buildkite-agent artifact download '.plans/**' .plans --step 'plan-${JOB_ID}'
     for module in \$\$(buildkite-agent meta-data get modules); do
       echo \"+++ applying \$\${module}\"
       ${plan_decryption_command}

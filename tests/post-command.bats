@@ -61,6 +61,9 @@ setup() {
 
   run yq '.steps[4].label' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
   assert_output ":terragrunt: [${BUILDKITE_LABEL}] Apply Modules"
+
+  run yq '.steps[2].key' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT 
+  assert_output "plan:test:test"
 }
 
 @test "Generates a pipeline with a deploy module and refresh" { 
