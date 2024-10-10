@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.4:
+      - fatzebra/terragrunt-workspace#v1.4.5:
           module_dir: "test/test/"
 ```
 
@@ -52,7 +52,7 @@ After adding the docker plugin you also need to run the module discovery as a co
 steps:
   - command: buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir /test/test)"
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.4:
+      - fatzebra/terragrunt-workspace#v1.4.5:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "devopsinfra/docker-terragrunt:aws-tf-1.9.7-tg-0.67.16"

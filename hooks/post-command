@@ -211,6 +211,7 @@ printf '\n\n%s' "${annotation[@]}" | buildkite-agent annotate --style "info" --c
 # shellcheck disable=SC2124
 PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Plan Modules\"
+  key: \"plan-${MODULE_DIR}\"
   command: |-
     printf '\n\n%s' \"---\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
     printf '\n\n%s' \":rocket: Selected modules\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
@@ -229,10 +230,11 @@ ${step_args[@]}
   prompt: Apply changes?
 
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
+  key: \"apply-${MODULE_DIR}\"
   command: |-
 ${refresh_commands[@]}
     mkdir -p .plans
-    buildkite-agent artifact download '.plans/**' .plans
+    buildkite-agent artifact download '.plans/**' .plans --step 'plan-${MODULE_DIR}'
     for module in \$\$(buildkite-agent meta-data get modules); do
       echo \"+++ applying \$\${module}\"
       ${plan_decryption_command}
