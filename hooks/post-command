@@ -26,6 +26,7 @@ function plugin_read_list_into_result() {
 }
 
 MODULE_DIR="$(echo "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR}" | sed 's/\/$//')"
+FAIL_ON_NO_MODULES="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES-"true"}"
 
 # Terragrunt extra args
 if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_TERRAGRUNT_ARGS ; then
@@ -50,7 +51,7 @@ discovered_modules=()
 
 if [[ -z "${discovered_modules_list}" ]]; then
   printf "\U274C No modules disovered"
-  if [[ "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES}" == "false"  ]]; then
+  if [[ "${FAIL_ON_NO_MODULES}" == "false"  ]]; then
     exit 0
   else 
     exit 1
@@ -136,7 +137,7 @@ done
 refresh_commands=("$(printf '    %s\n' "${refresh_commands[@]}")")
 
 # Plan encryption command 
-if [[ -n "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN=""}" ]] ; then
+if [[ -n "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN-""}" ]] ; then
   plan_encryption_command="sops encrypt -i --kms \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN}\" \".plans/\$\${module}\""
   plan_decryption_command="sops decrypt -i \".plans/\$\${module}\""
 else
@@ -152,7 +153,7 @@ if (( ${#deploy_modules[@]} == 0 )); then
   buildkite-agent annotate ":terragrunt: **${BUILDKITE_LABEL}**\nNo modules found for deployment" --style "warning" --context "${BUILDKITE_STEP_ID}"
 
   printf "\U274C No modules found for deployment"
-  if [[ "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES}" == "false"  ]]; then
+  if [[ "${FAIL_ON_NO_MODULES}" == "false"  ]]; then
     exit 0
   else 
     exit 1
@@ -164,6 +165,8 @@ elif (( ${#deploy_modules[@]} == 1  )); then
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Setting Module to Deploy\"
   command: |- 
     buildkite-agent meta-data set modules \"${deploy_modules[@]}\"
+
+- wait: ~
 "
 
 elif  (( ${#deploy_modules[@]} > 1 )); then
@@ -214,7 +217,7 @@ PIPELINE+="
 ${refresh_commands[@]}
     mkdir -p .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
-      echo \"--- planning \$\${module}\"
+      echo \"+++ planning \$\${module}\"
       printf '\n%s' \"  - \$\${module}\" | buildkite-agent annotate --append --context \"${BUILDKITE_STEP_ID}\"
       terragrunt plan -out \"\$\${PWD}/.plans/\$\${module}\" --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args[@]}
       ${plan_encryption_command}
@@ -231,7 +234,7 @@ ${refresh_commands[@]}
     mkdir -p .plans
     buildkite-agent artifact download '.plans/**' .plans
     for module in \$\$(buildkite-agent meta-data get modules); do
-      echo \"--- applying \$\${module}\"
+      echo \"+++ applying \$\${module}\"
       ${plan_decryption_command}
       terragrunt apply --terragrunt-working-dir \"${MODULE_DIR}/\$\${module}\" ${terragrunt_args[@]} \"\$\${PWD}/.plans/\$\${module}\"
     done
