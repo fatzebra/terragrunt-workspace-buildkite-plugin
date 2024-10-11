@@ -6,9 +6,13 @@ load "$BATS_PLUGIN_PATH/load.bash"
 #export BUILDKITE_AGENT_STUB_DEBUG=/dev/tty
 
 setup_file() { 
-  export OUTPUT_PATH="$PWD/tests/.outputs/"
+  export OUTPUT_PATH="$PWD/tests/.outputs/"  
   mkdir -p "${OUTPUT_PATH}"
   rm -f ${OUTPUT_PATH}/*
+
+  export DATA_PATH="$PWD/tests/.data/"
+  mkdir -p "${DATA_PATH}"
+  rm -f ${DATA_PATH}/*
 }
 
 setup() {
@@ -25,14 +29,13 @@ setup() {
 
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
 
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\": [\"$PWD/test/test/$MODULE\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
+
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted' \
     'pipeline upload : echo Uploading pipeline'
-
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE\"]}'"
 
   run "$PWD/hooks/post-command"
 
@@ -41,7 +44,6 @@ setup() {
   assert_output --partial "Modules for deployment - $MODULE"
 
   unstub buildkite-agent
-  unstub terragrunt 
 
   # Is pipeline valid yaml
   run yq '.' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
@@ -72,11 +74,10 @@ setup() {
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0="passwords"
 
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\"]}'"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\": [\"$PWD/test/test/$MODULE\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
 
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted' \
     'pipeline upload : echo "Uploading pipeline"'
@@ -88,7 +89,6 @@ setup() {
   assert_line "Modules for deployment - $MODULE "
   assert_line "Uploading pipeline"
 
-  unstub terragrunt  
   unstub buildkite-agent
 
   # The refresh module should never be planned
@@ -109,14 +109,13 @@ setup() {
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="${MODULE}"
 
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\":[\"$PWD/test/test/$MODULE\",\"$PWD/test/test/$DANGER_MODULE\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
+
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted' \
     'pipeline upload : echo Uploading pipeline'
-
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\":[\"$PWD/test/test/$MODULE\",\"$PWD/test/test/$DANGER_MODULE\"]}'"
 
   run "$PWD/hooks/post-command"
 
@@ -126,7 +125,6 @@ setup() {
   assert_line "Modules after filtering - $MODULE "
 
   unstub buildkite-agent
-  unstub terragrunt 
 
   # Is pipeline valid yaml
   run yq '.' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
@@ -144,21 +142,19 @@ setup() {
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="${MODULE}"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN="arn:aws:kms:ap-southeast-2:123456789012:key/5a14434f-9d4e-55dh-27df-f32711fe0492"
 
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\":[\"$PWD/test/test/$MODULE\",\"$PWD/test/test/$DANGER_MODULE\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
+
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted' \
     'pipeline upload : echo Uploading pipeline'
-
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\":[\"$PWD/test/test/$MODULE\",\"$PWD/test/test/$DANGER_MODULE\"]}'"
 
   run "$PWD/hooks/post-command"
 
   assert_success
   
   unstub buildkite-agent
-  unstub terragrunt 
 
   # Is pipeline valid yaml
   run yq '.' $BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT
@@ -176,11 +172,10 @@ setup() {
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0="passwords"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1="constants"
 
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1}\"]}'"
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_0}\", \"$PWD/test/test/${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODULES_1}\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
 
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted' \
     'pipeline upload : echo Uploading pipeline'
@@ -192,7 +187,6 @@ setup() {
   assert_line "Modules for deployment - $MODULE_1 $MODULE_2 "
   assert_line "Uploading pipeline"
 
-  unstub terragrunt  
   unstub buildkite-agent
 
   # The refresh module should never be planned
@@ -214,12 +208,11 @@ setup() {
 
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="other"
-
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\"]}'"
+  
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
 
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted'
 
@@ -230,7 +223,6 @@ setup() {
   refute_line "Modules for deployment - $MODULE_1 $MODULE_2 "
   refute_line "Uploading pipeline"
 
-  unstub terragrunt  
   unstub buildkite-agent
 }
 
@@ -241,12 +233,11 @@ setup() {
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT="${OUTPUT_PATH}/${BATS_TEST_NAME// /"_"}.yml"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MODULES_0="other"
   export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_FAIL_ON_NO_MODULES="false"
-
-  stub terragrunt \
-    "output-module-groups --terragrunt-working-dir ${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_MODULE_DIR} : echo '{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\"]}'"
+  
+  export BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH="${DATA_PATH}/${BATS_TEST_NAME// /"_"}_output_module_groups.json"
+  echo "{\"Group1\": [\"$PWD/test/test/$MODULE_1\", \"$PWD/test/test/$MODULE_2\"]}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH}"
 
   stub buildkite-agent \
-    'meta-data exists "terragrunt-workspace-module-groups" : false' \
     "step get --format json : echo '${STEP_OUTPUT}'" \
     'annotate \* \* \* \* \* \* : echo Noted'
 
@@ -257,6 +248,5 @@ setup() {
   refute_line "Modules for deployment - $MODULE_1 $MODULE_2 "
   refute_line "Uploading pipeline"
 
-  unstub terragrunt  
   unstub buildkite-agent
 }

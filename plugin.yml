@@ -12,6 +12,11 @@ configuration:
       description: The path to the modules that you want to apply
       type: string
 
+    output_module_groups_path:
+      description: The path to a file where the  output from `terragrunt output-module-groups` has been saved. Used in a command when your agent doesn't have access to terragrunt
+      type: string
+      default: ".terragrunt_module_groups_output.json"
+
     allowed_modules:
       description: A list of modules that can be used by this plugin
       type: array

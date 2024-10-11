@@ -40,13 +40,17 @@ else
 fi
 
 # look for the available terragrunt modules
-if buildkite-agent meta-data exists "terragrunt-workspace-module-groups" ; then 
-  module_groups="$(buildkite-agent meta-data get "terragrunt-workspace-module-groups")"
+MODULE_GROUP_OUTPUT_PATH="${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_OUTPUT_MODULE_GROUPS_PATH-".terragrunt_module_groups_output.json"}"
+
+# check to see if the output path exists and has content
+if [[ -s "${MODULE_GROUP_OUTPUT_PATH}" ]] ; then
+  MODULE_GROUPS="$(cat "${MODULE_GROUP_OUTPUT_PATH}")"
 else
   # shellcheck disable=SC2068
-  module_groups="$(terragrunt output-module-groups --terragrunt-working-dir "${MODULE_DIR}" ${terragrunt_args[@]})"
+  MODULE_GROUPS="$(terragrunt output-module-groups --terragrunt-working-dir "${MODULE_DIR}" ${terragrunt_args[@]})"
 fi
-discovered_modules_list="$(echo "${module_groups}" | jq -r '[keys[] as $k | .[$k] ]| flatten | .[]')"
+
+discovered_modules_list="$(echo "${MODULE_GROUPS}" | jq -r '[keys[] as $k | .[$k] ]| flatten | .[]')"
 
 discovered_modules=()
 

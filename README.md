@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.7:
+      - fatzebra/terragrunt-workspace#v2.0.0:
           module_dir: "test/test/"
 ```
 
@@ -45,19 +45,21 @@ Then the block will ask you to deploy the db and web modules
 
 Modules are discovered using the terragrunt command `terragrunt output-module-groups` during a post-command hook, so if you don't have terragrunt installed on your agent and instead use the docker or docker-compose plugins this will fail to run. We recommend the [devopsinfra/docker-terragrunt](https://hub.docker.com/r/devopsinfra/docker-terragrunt) docker image with the docker plugin, the docker image has all the tools requried and the docker plugin saves having to have a docker-compose file.
 
-After adding the docker plugin you also need to run the module discovery as a command, this is then used by the plugin to run the deployment.
+When you using the docker plugin add the following the command to provide the output to the plugin
 
 
 ```yml
 steps:
-  - command: buildkite-agent meta-data set terragrunt-workspace-module-groups "$(terragrunt output-module-groups --terragrunt-working-dir /test/test)"
+  - command: terragrunt output-module-groups > .terragrunt_module_groups_output.json
     plugins:
-      - fatzebra/terragrunt-workspace#v1.4.7:
+      - fatzebra/terragrunt-workspace#v2.0.0:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "devopsinfra/docker-terragrunt:aws-tf-1.9.7-tg-0.67.16"
         mount-buildkite-agent: true
 ```
+
+This will output the JSON data to a location that the plugin tries to look for the output from. To change this value see the `output_module_groups_path` property
 
 The plugin also copies the env, plugin and agent configuration to any steps it generates so this will be applied for subsequent steps.
 
@@ -66,6 +68,12 @@ The plugin also copies the env, plugin and agent configuration to any steps it g
 ### `module_dir` (Required, string)
 
 The relative path to the directory where the terragrunt modules you want to run are in.
+
+### `output_module_groups_path` (Optional, string)
+
+The output from the command `terragrunt output-module-groups` piped to this path when run in the `module_dir` this is a JSON object which outlines the available modules and the order they should be executed in. This can be used when you don't terragrunt on your workspace but use docker to run terragrunt. If the file can't be found or doesn't have content then the pipeline will try and run the command itself.
+
+Default: `.terragrunt_module_groups_output.json`
 
 ### `allowed_modules` (Optional, array)
 
@@ -95,6 +103,7 @@ Writes the pipeline to the nominated output path
 
 If no modules are found for deployment should the pipeline fail
 
+Default: true
 
 ## Developing
 
