@@ -2,7 +2,7 @@
 
 Provides a standard pipeline for deploying terragrunt workspaces
 
-The plugin generates a dynamic pipeline based on the modules discovered by terragrunt. 
+The plugin generates a dynamic pipeline based on the modules discovered by terragrunt.
 
 The pipeline consists of:
 
@@ -11,7 +11,7 @@ The pipeline consists of:
 - A block to confirm you want to run apply
 - A command step to run apply for each of the selected modules
 
-By default all modules found by terragrunt will be included in the block step, however you can filter this by providing a list of allowed modules. 
+By default all modules found by terragrunt will be included in the block step, however you can filter this by providing a list of allowed modules.
 
 If you have modules that are just made up of data components that provide information to your other modules you can add them under the data_modules option, before running the plan or apply commands each of the data modules will be refreshed. This builds a local state file since modules without resources don't save their state in terraform.
 
@@ -24,7 +24,7 @@ Add the following to your `pipeline.yml`:
 steps:
   - command: ~
     plugins:
-      - fatzebra/terragrunt-workspace#v2.0.0:
+      - fatzebra/terragrunt-workspace#v2.0.1:
           module_dir: "test/test/"
 ```
 
@@ -41,7 +41,7 @@ If you have the following terragrunt setup
 
 Then the block will ask you to deploy the db and web modules
 
-### Module Discovery 
+### Module Discovery
 
 Modules are discovered using the terragrunt command `terragrunt output-module-groups` during a post-command hook, so if you don't have terragrunt installed on your agent and instead use the docker or docker-compose plugins this will fail to run. We recommend the [devopsinfra/docker-terragrunt](https://hub.docker.com/r/devopsinfra/docker-terragrunt) docker image with the docker plugin, the docker image has all the tools requried and the docker plugin saves having to have a docker-compose file.
 
@@ -52,7 +52,7 @@ When you using the docker plugin add the following the command to provide the ou
 steps:
   - command: terragrunt output-module-groups > .terragrunt_module_groups_output.json
     plugins:
-      - fatzebra/terragrunt-workspace#v2.0.0:
+      - fatzebra/terragrunt-workspace#v2.0.1:
         module_dir: "test/test/"
       - docker#v5.11.0:
         image: "devopsinfra/docker-terragrunt:aws-tf-1.9.7-tg-0.67.16"
@@ -91,7 +91,7 @@ A list of extra arguments to pass to any terragrunt commands
 
 An AWS kms key ARN to use to encrypt the tfplan state when passing between jobs. tfplan can contain sensitive data that you might not want people who can read your pipeline and access artifacts to see.
 
-The encryption process uses [sops](https://github.com/getsops/sops) to encrypt the file contents as the plan generally be over the 4kb limit of a single kms encrypt operation. 
+The encryption process uses [sops](https://github.com/getsops/sops) to encrypt the file contents as the plan generally be over the 4kb limit of a single kms encrypt operation.
 
 Due to a bug in sops you will need to have version v3.9.0 and above to perform the encryption operation without having a config file present.
 
@@ -113,10 +113,10 @@ To run the tests:
 docker-compose run --rm test
 ```
 
-Before pushing a PR please run 
+Before pushing a PR please run
 
-```shell 
-docker-compose run --rm lint 
+```shell
+docker-compose run --rm lint
 docker-compose run --rm shellcheck
 ```
 
