@@ -35,7 +35,7 @@ if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_TERRAGRUNT
   for arg in "${result[@]}" ; do
     args+=( "${arg}" )
   done
-else 
+else
   terragrunt_args=("")
 fi
 
@@ -58,12 +58,12 @@ if [[ -z "${discovered_modules_list}" ]]; then
   printf "\U274C No modules disovered"
   if [[ "${FAIL_ON_NO_MODULES}" == "false"  ]]; then
     exit 0
-  else 
+  else
     exit 1
   fi
 fi
 
-for module in ${discovered_modules_list}; do 
+for module in ${discovered_modules_list}; do
   discovered_modules+=("${module#*"${MODULE_DIR}"/}")
 done
 
@@ -77,15 +77,15 @@ if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_ALLOWED_MO
 
   available_modules=()
   for discovered_module in "${discovered_modules[@]}"; do
-    for allowed_module in "${result[@]}" ; do 
-      if [[ "${discovered_module}" == "${allowed_module}" ]]; then 
+    for allowed_module in "${result[@]}" ; do
+      if [[ "${discovered_module}" == "${allowed_module}" ]]; then
         available_modules+=("${discovered_module}")
       fi
     done
   done
 
   echo "Modules after filtering - $(printf '%s ' "${available_modules[@]}")"
-else 
+else
   available_modules=("${discovered_modules[@]}")
   allowed_modules=("")
 fi
@@ -96,14 +96,14 @@ if plugin_read_list_into_result BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DATA_MODUL
   data_modules=()
   deploy_modules=()
 
-  for available_module in "${available_modules[@]}"; do 
-    if [[ "$(printf '|%s|' "${result[@]}")" == *"|${available_module}|"* ]] ; then 
+  for available_module in "${available_modules[@]}"; do
+    if [[ "$(printf '|%s|' "${result[@]}")" == *"|${available_module}|"* ]] ; then
       data_modules+=("${available_module}")
     fi
   done
 
-  for available_module in "${available_modules[@]}"; do 
-    if [[ "$(printf '|%s|' "${result[@]}")" != *"|${available_module}|"* ]] ; then 
+  for available_module in "${available_modules[@]}"; do
+    if [[ "$(printf '|%s|' "${result[@]}")" != *"|${available_module}|"* ]] ; then
       deploy_modules+=("${available_module}")
     fi
   done
@@ -121,7 +121,7 @@ step="$(buildkite-agent step get --format json)"
 step_args=()
 step_args+=("plugins: $(echo "${BUILDKITE_PLUGINS}" | jq -c '[.[] | select(keys[] | contains("terragrunt-workspace") != true )]')")
 copy_params=("agents" "env" "notify")
-for copy_param in "${copy_params[@]}"; do 
+for copy_param in "${copy_params[@]}"; do
   if [[ -n "$( echo "${step}" | jq -r --arg copy_param "${copy_param}" 'if (.[$copy_param]) then .[$copy_param] else null end | select(.!=null)' )" ]]; then
     if [[ "${copy_param}" == "agents" ]]; then
       step_args+=("${copy_param}: $(echo "${step}" | jq -c '.agents | map({(. | split("=") | .[0]): (. | split("=") | .[1]) }) | add' )" )
@@ -141,7 +141,7 @@ done
 
 refresh_commands=("$(printf '    %s\n' "${refresh_commands[@]}")")
 
-# Plan encryption command 
+# Plan encryption command
 if [[ -n "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN-""}" ]] ; then
   plan_encryption_command="sops encrypt -i --kms \"${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_PLAN_ENCRYPTION_KMS_KEY_ARN}\" \".plans/\$\${module}\""
   plan_decryption_command="sops decrypt -i \".plans/\$\${module}\""
@@ -154,21 +154,21 @@ BASE_PIPELINE="steps:"
 PIPELINE="${BASE_PIPELINE}"
 
 # Determine how to display the deployment
-if (( ${#deploy_modules[@]} == 0 )); then 
-  buildkite-agent annotate ":terragrunt: **${BUILDKITE_LABEL}**\nNo modules found for deployment" --style "warning" --context "${BUILDKITE_STEP_ID}"
+if (( ${#deploy_modules[@]} == 0 )); then
+  buildkite-agent annotate ":terragrunt: **${BUILDKITE_LABEL}**\\nNo modules found for deployment" --style "warning" --context "${BUILDKITE_STEP_ID}"
 
   printf "\U274C No modules found for deployment"
   if [[ "${FAIL_ON_NO_MODULES}" == "false"  ]]; then
     exit 0
-  else 
+  else
     exit 1
   fi
-  
-elif (( ${#deploy_modules[@]} == 1  )); then 
+
+elif (( ${#deploy_modules[@]} == 1  )); then
   # shellcheck disable=SC2124
   PIPELINE+="
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Setting Module to Deploy\"
-  command: |- 
+  command: |-
     buildkite-agent meta-data set modules \"${deploy_modules[@]}\"
 
 - wait: ~
@@ -179,11 +179,12 @@ elif  (( ${#deploy_modules[@]} > 1 )); then
   PIPELINE+="
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Select Modules\"
   prompt: \"Select the modules to deploy\"
-  fields: 
+  blocked_state: running
+  fields:
     - select: \"Modules\"
       key: \"modules\"
       multiple: true
-      options: 
+      options:
 "
 
   for module in "${deploy_modules[@]}" ; do
@@ -199,7 +200,7 @@ module_notes=(":mage: Discovered modules $(printf '\n  - %s' "${discovered_modul
 if [[ -n "${data_modules[*]}" ]]; then
   module_notes+=(":chart_with_upwards_trend: Data modules $(printf '\n  - %s' "${data_modules[@]}")")
 fi
-if [[ -n "${allowed_modules[*]}" ]]; then 
+if [[ -n "${allowed_modules[*]}" ]]; then
   module_notes+=(":policeman: Allowed modules $(printf '\n  - %s' "${allowed_modules[@]}")")
 fi
 module_notes+=(":black_right_pointing_triangle_with_double_vertical_bar: Deploy modules $(printf '\n  - %s' "${deploy_modules[@]}")")
@@ -234,6 +235,7 @@ ${step_args[@]}
 
 - block: \":terragrunt: [${BUILDKITE_LABEL}] Apply Changes?\"
   prompt: Apply changes?
+  blocked_state: running
 
 - label: \":terragrunt: [${BUILDKITE_LABEL}] Apply Modules\"
   key: \"apply:${JOB_ID}\"
@@ -249,10 +251,9 @@ ${refresh_commands[@]}
 ${step_args[@]}
 "
 
-if [[ -n "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT-""}" ]]; then 
+if [[ -n "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT-""}" ]]; then
   echo ":bug: writing pipeline output"
   echo "${PIPELINE}" > "${BUILDKITE_PLUGIN_TERRAGRUNT_WORKSPACE_DEBUG_PIPELINE_OUTPUT}"
-fi 
+fi
 
 echo "${PIPELINE}" | buildkite-agent pipeline upload
-
